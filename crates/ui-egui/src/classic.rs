@@ -6,7 +6,10 @@ use serde_json::{Value as Json, json};
 
 use crate::{InterfaceMode, SheetApp, icons::Icon, theme::Tokens};
 
-const MENUS: &[(&str, &[&[(&str, &str)]])] = &[
+type MenuSection = &'static [(&'static str, &'static str)];
+type MenuEntry = (&'static str, &'static [MenuSection]);
+
+const MENUS: &[MenuEntry] = &[
     (
         "File",
         &[&[("New Workbook", "file.new"), ("Open…", "file.open"), ("Save", "file.save"), ("Save As…", "file.saveAs"), ("Print…", "file.print")]],
