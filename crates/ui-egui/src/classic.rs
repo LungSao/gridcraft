@@ -53,7 +53,12 @@ const MENUS: &[MenuEntry] = &[
         "Sheet",
         &[
             &[("Insert Rows", "home.insertRows"), ("Insert Columns", "home.insertColumns"), ("Insert Sheet", "home.insertSheet")],
-            &[("Delete Cells…", "home.deleteCells"), ("Delete Rows", "home.deleteRows"), ("Delete Columns", "home.deleteColumns"), ("Delete Sheet", "home.deleteSheet")],
+            &[
+                ("Delete Cells…", "home.deleteCells"),
+                ("Delete Rows", "home.deleteRows"),
+                ("Delete Columns", "home.deleteColumns"),
+                ("Delete Sheet", "home.deleteSheet"),
+            ],
             &[("Row Height…", "home.rowHeight"), ("Column Width…", "home.columnWidth"), ("AutoFit Column Width", "home.autofitColumnWidth")],
             &[("Hide Rows", "home.hideRows"), ("Hide Columns", "home.hideColumns"), ("Hide Sheet", "sheet.hide"), ("Unhide Sheet…", "sheet.unhide")],
         ],
@@ -199,10 +204,10 @@ fn standard_toolbar(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 2.0;
                         for (label, icon, id, params) in [
-                        ("New Workbook", Icon::NewFile, "file.new", Json::Null),
-                        ("Open", Icon::OpenFolder, "file.open", Json::Null),
-                        ("Save", Icon::Save, "file.save", Json::Null),
-                        ("Print", Icon::Print, "file.print", Json::Null),
+                            ("New Workbook", Icon::NewFile, "file.new", Json::Null),
+                            ("Open", Icon::OpenFolder, "file.open", Json::Null),
+                            ("Save", Icon::Save, "file.save", Json::Null),
+                            ("Print", Icon::Print, "file.print", Json::Null),
                         ] {
                             compact_icon_command(app, ui, icon, label, id, &params);
                         }
@@ -211,11 +216,11 @@ fn standard_toolbar(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 2.0;
                         for (label, icon, id, params) in [
-                        ("Cut", Icon::Cut, "edit.cut", Json::Null),
-                        ("Copy", Icon::Copy, "edit.copy", Json::Null),
-                        ("Paste", Icon::Paste, "edit.paste", Json::Null),
-                        ("Undo", Icon::Undo, "edit.undo", Json::Null),
-                        ("Redo", Icon::Redo, "edit.redo", Json::Null),
+                            ("Cut", Icon::Cut, "edit.cut", Json::Null),
+                            ("Copy", Icon::Copy, "edit.copy", Json::Null),
+                            ("Paste", Icon::Paste, "edit.paste", Json::Null),
+                            ("Undo", Icon::Undo, "edit.undo", Json::Null),
+                            ("Redo", Icon::Redo, "edit.redo", Json::Null),
                         ] {
                             compact_icon_command(app, ui, icon, label, id, &params);
                         }
@@ -224,13 +229,13 @@ fn standard_toolbar(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 2.0;
                         for (label, icon, id, params) in [
-                        ("Insert Cells", Icon::Insert, "home.insertCells", Json::Null),
-                        ("Insert Rows", Icon::InsertRows, "home.insertRows", Json::Null),
-                        ("Insert Columns", Icon::InsertColumns, "home.insertColumns", Json::Null),
-                        ("Delete Cells", Icon::Delete, "home.deleteCells", Json::Null),
-                        ("Delete Rows", Icon::DeleteRows, "home.deleteRows", Json::Null),
-                        ("Delete Columns", Icon::DeleteColumns, "home.deleteColumns", Json::Null),
-                        ("Insert Sheet", Icon::Sheet, "home.insertSheet", Json::Null),
+                            ("Insert Cells", Icon::Insert, "home.insertCells", Json::Null),
+                            ("Insert Rows", Icon::InsertRows, "home.insertRows", Json::Null),
+                            ("Insert Columns", Icon::InsertColumns, "home.insertColumns", Json::Null),
+                            ("Delete Cells", Icon::Delete, "home.deleteCells", Json::Null),
+                            ("Delete Rows", Icon::DeleteRows, "home.deleteRows", Json::Null),
+                            ("Delete Columns", Icon::DeleteColumns, "home.deleteColumns", Json::Null),
+                            ("Insert Sheet", Icon::Sheet, "home.insertSheet", Json::Null),
                         ] {
                             compact_icon_command(app, ui, icon, label, id, &params);
                         }
@@ -239,14 +244,14 @@ fn standard_toolbar(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 2.0;
                         for (label, icon, id, params) in [
-                        ("Sort A to Z", Icon::SortAsc, "data.sortAscending", Json::Null),
-                        ("Filter", Icon::Filter, "data.filter", Json::Null),
-                        ("AutoSum", Icon::Sum, "formulas.autoSum", Json::Null),
-                        ("Find", Icon::Find, "edit.find", json!({"what":""})),
-                        ("AutoFit Column Width", Icon::Format, "home.autofitColumnWidth", Json::Null),
-                        ("AutoFit Row Height", Icon::Format, "home.autofitRowHeight", Json::Null),
-                        ("Hide Rows", Icon::DeleteRows, "home.hideRows", Json::Null),
-                        ("Hide Columns", Icon::DeleteColumns, "home.hideColumns", Json::Null),
+                            ("Sort A to Z", Icon::SortAsc, "data.sortAscending", Json::Null),
+                            ("Filter", Icon::Filter, "data.filter", Json::Null),
+                            ("AutoSum", Icon::Sum, "formulas.autoSum", Json::Null),
+                            ("Find", Icon::Find, "edit.find", json!({"what":""})),
+                            ("AutoFit Column Width", Icon::Format, "home.autofitColumnWidth", Json::Null),
+                            ("AutoFit Row Height", Icon::Format, "home.autofitRowHeight", Json::Null),
+                            ("Hide Rows", Icon::DeleteRows, "home.hideRows", Json::Null),
+                            ("Hide Columns", Icon::DeleteColumns, "home.hideColumns", Json::Null),
                         ] {
                             compact_icon_command(app, ui, icon, label, id, &params);
                         }
