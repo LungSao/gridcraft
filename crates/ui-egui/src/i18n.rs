@@ -485,6 +485,18 @@ mod tests {
     }
 
     #[test]
+    fn interface_preference_defaults_to_standard_and_round_trips() {
+        let old: crate::UiState = serde_json::from_str(r#"{"dark": true, "language": "de"}"#).unwrap();
+        assert_eq!(old.interface, crate::InterfaceMode::GridCraftStandard);
+        let unknown: crate::UiState = serde_json::from_str(r#"{"interface":"futureMode"}"#).unwrap();
+        assert_eq!(unknown.interface, crate::InterfaceMode::GridCraftStandard);
+        let mut selected = old;
+        selected.interface = crate::InterfaceMode::LibreOfficeClassic;
+        let restored: crate::UiState = serde_json::from_str(&serde_json::to_string(&selected).unwrap()).unwrap();
+        assert_eq!(restored.interface, crate::InterfaceMode::LibreOfficeClassic);
+    }
+
+    #[test]
     fn language_commands_switch_and_persist() {
         let mut app = crate::SheetApp::new(gridcraft_engine::Session::default(), Default::default());
         for language in Language::ALL {

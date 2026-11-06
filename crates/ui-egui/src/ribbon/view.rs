@@ -19,6 +19,16 @@ pub(super) fn view(app: &mut SheetApp, ui: &mut Ui) {
     sep(ui);
     let s = app.session.active().and_then(|d| d.wb.active().map(|s| (s.show_gridlines, s.show_headings))).unwrap_or((true, true));
     let lang = app.ui.language;
+    ui.menu_button(lang.tr("User Interface"), |ui| {
+        if ui.selectable_label(app.ui.interface == crate::InterfaceMode::GridCraftStandard, lang.tr("GridCraft Standard")).clicked() {
+            app.ui.interface = crate::InterfaceMode::GridCraftStandard;
+            ui.close();
+        }
+        if ui.selectable_label(app.ui.interface == crate::InterfaceMode::LibreOfficeClassic, lang.tr("LibreOffice Classic")).clicked() {
+            app.ui.interface = crate::InterfaceMode::LibreOfficeClassic;
+            ui.close();
+        }
+    });
     let page_layout =
         app.session.active().and_then(|d| d.wb.active().map(|s| s.view == gridcraft_engine::model::SheetViewMode::PageLayout)).unwrap_or(false);
     // Two columns of two, as in Excel's Show group: four stacked rows overflow the ribbon body.
