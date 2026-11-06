@@ -102,8 +102,8 @@ pub(crate) fn show(app: &mut SheetApp, ui: &mut Ui) {
                 })
             });
     });
-    standard_toolbar(app, ui, t);
-    formatting_toolbar(app, ui, t);
+    standard_toolbar(app, ui, &t);
+    formatting_toolbar(app, ui, &t);
 }
 
 fn interface_choices(app: &mut SheetApp, ui: &mut Ui) {
