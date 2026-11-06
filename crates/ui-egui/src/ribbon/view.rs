@@ -29,6 +29,11 @@ pub(super) fn view(app: &mut SheetApp, ui: &mut Ui) {
             ui.close();
         }
     });
+    let mut show_title_bar = app.ui.show_title_bar;
+    let title_bar = ui.checkbox(&mut show_title_bar, lang.tr("Title Bar"));
+    if title_bar.changed() {
+        app.ui.show_title_bar = show_title_bar;
+    }
     let page_layout =
         app.session.active().and_then(|d| d.wb.active().map(|s| s.view == gridcraft_engine::model::SheetViewMode::PageLayout)).unwrap_or(false);
     // Two columns of two, as in Excel's Show group: four stacked rows overflow the ribbon body.

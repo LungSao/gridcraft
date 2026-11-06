@@ -90,6 +90,8 @@ pub struct UiState {
     pub system_theme: bool,
     pub ribbon_tab: String,
     pub ribbon_collapsed: bool,
+    /// Show the app's title toolbar with AutoSave, window controls and workbook title.
+    pub show_title_bar: bool,
     /// The top chrome layout. Existing preference files default to the original ribbon.
     #[serde(deserialize_with = "lenient_interface_mode")]
     pub interface: InterfaceMode,
@@ -169,6 +171,7 @@ impl Default for UiState {
             system_theme: false,
             ribbon_tab: "Home".into(),
             ribbon_collapsed: false,
+            show_title_bar: true,
             interface: InterfaceMode::GridCraftStandard,
             formula_bar_expanded: false,
             formula_bar_lines: formula_bar::MAX_LINES,

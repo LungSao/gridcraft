@@ -219,7 +219,7 @@ impl SheetApp {
         if self.backstage.is_none() || self.keytips.prefix().is_some() {
             self.ribbon_keys(&ctx);
         }
-        if self.chrome.title_bar {
+        if self.chrome.title_bar && self.ui.show_title_bar {
             ribbon::title_bar(self, ui);
         }
         if self.backstage.is_some() {
