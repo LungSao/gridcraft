@@ -307,6 +307,38 @@ pub fn paint_on_sheet(p: &Painter, rect: Rect, icon: Icon, c: Color32) {
     paint_with(p, rect, icon, c, &Palette::of(&Tokens::light()));
 }
 
+fn paint_row_column_action(
+    g: &G,
+    icon: Icon,
+    pal: &Palette,
+    paper: Color32,
+    light: Color32,
+    blue: Color32,
+    green: Color32,
+    red: Color32,
+) {
+    g.rect(2.0, 2.0, 12.0, 12.0, Some(paper), Some(light));
+    g.stroke(&[(2.0, 6.0), (14.0, 6.0)], light);
+    g.stroke(&[(2.0, 10.0), (14.0, 10.0)], light);
+    g.stroke(&[(6.0, 2.0), (6.0, 14.0)], light);
+    g.stroke(&[(10.0, 2.0), (10.0, 14.0)], light);
+    match icon {
+        Icon::InsertRows => {
+            g.rect(2.5, 6.5, 11.0, 3.0, Some(pal.wash(Cat::Blue)), Some(blue));
+            g.stroke(&[(1.0, 8.0), (3.5, 8.0)], green);
+            g.stroke(&[(2.25, 6.75), (2.25, 9.25)], green);
+        }
+        Icon::InsertColumns => {
+            g.rect(6.5, 2.5, 3.0, 11.0, Some(pal.wash(Cat::Blue)), Some(blue));
+            g.stroke(&[(8.0, 1.0), (8.0, 3.5)], green);
+            g.stroke(&[(6.75, 2.25), (9.25, 2.25)], green);
+        }
+        Icon::DeleteRows => g.line(&[(2.0, 8.0), (14.0, 8.0)], red, 2.0),
+        Icon::DeleteColumns => g.line(&[(8.0, 2.0), (8.0, 14.0)], red, 2.0),
+        _ => {}
+    }
+}
+
 /// Draws `icon` into `rect` (square-ish), in colour `c`, with palette `pal`.
 fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
     let side = rect.width().min(rect.height());
@@ -459,27 +491,11 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
             g.stroke(&[(4.0, 5.2), (9.0, 5.2)], green);
             g.stroke(&[(4.0, 10.7), (9.0, 10.7)], red);
         }
-        Icon::InsertRows | Icon::InsertColumns | Icon::DeleteRows | Icon::DeleteColumns => {
-            g.rect(2.0, 2.0, 12.0, 12.0, Some(paper), Some(light));
-            g.stroke(&[(2.0, 6.0), (14.0, 6.0)], light);
-            g.stroke(&[(2.0, 10.0), (14.0, 10.0)], light);
-            g.stroke(&[(6.0, 2.0), (6.0, 14.0)], light);
-            g.stroke(&[(10.0, 2.0), (10.0, 14.0)], light);
-            match icon {
-                Icon::InsertRows => {
-                    g.rect(2.5, 6.5, 11.0, 3.0, Some(pal.wash(Cat::Blue)), Some(blue));
-                    g.stroke(&[(1.0, 8.0), (3.5, 8.0)], green);
-                    g.stroke(&[(2.25, 6.75), (2.25, 9.25)], green);
-                }
-                Icon::InsertColumns => {
-                    g.rect(6.5, 2.5, 3.0, 11.0, Some(pal.wash(Cat::Blue)), Some(blue));
-                    g.stroke(&[(8.0, 1.0), (8.0, 3.5)], green);
-                    g.stroke(&[(6.75, 2.25), (9.25, 2.25)], green);
-                }
-                Icon::DeleteRows => g.line(&[(2.0, 8.0), (14.0, 8.0)], red, 2.0),
-                Icon::DeleteColumns => g.line(&[(8.0, 2.0), (8.0, 14.0)], red, 2.0),
-                _ => {}
-            }
+        Icon::InsertRows
+        | Icon::InsertColumns
+        | Icon::DeleteRows
+        | Icon::DeleteColumns => {
+            paint_row_column_action(&g, icon, pal, paper, light, blue, green, red);
         }
         Icon::Insert | Icon::Delete | Icon::Format => {
             g.rect(2.0, 3.0, 12.0, 10.0, Some(paper), Some(light));
