@@ -410,10 +410,7 @@ fn underline_control(app: &mut SheetApp, ui: &mut Ui) {
         command_menu(
             app,
             ui,
-            &[
-                ("Underline", "home.underline", json!({"style":"single"})),
-                ("Double Underline", "home.underline", json!({"style":"double"})),
-            ],
+            &[("Underline", "home.underline", json!({"style":"single"})), ("Double Underline", "home.underline", json!({"style":"double"}))],
         );
     });
 }
@@ -424,10 +421,8 @@ fn currency_control(app: &mut SheetApp, ui: &mut Ui) {
         app.run_or_alert("home.accounting", json!({}));
     }
     egui::Popup::menu(&menu).show(|ui| {
-        let mut items: Vec<_> = crate::ribbon::ACCOUNTING_SYMBOLS
-            .iter()
-            .map(|(label, code)| (*label, "home.numberFormat", json!({"code":code})))
-            .collect();
+        let mut items: Vec<_> =
+            crate::ribbon::ACCOUNTING_SYMBOLS.iter().map(|(label, code)| (*label, "home.numberFormat", json!({"code":code}))).collect();
         items.push(("-", "", Json::Null));
         items.push(("More Accounting Formats…", "dialog:formatCells", json!({"tab":"Number"})));
         command_menu(app, ui, &items);
@@ -482,39 +477,28 @@ fn fill_color_control(app: &mut SheetApp, ui: &mut Ui) {
 
 fn color_control(app: &mut SheetApp, ui: &mut Ui, id: &str) {
     let is_fill = id == "home.fillColor";
-    let (icon, previous, none_label) = if is_fill {
-        (Icon::Fill, app.grid.last_fill.clone(), "No Fill")
-    } else {
-        (Icon::FontColor, app.grid.last_font_color.clone(), "Automatic")
-    };
-    let accent = gridcraft_engine::model::Color::from_hex(&previous)
-        .and_then(|color| color.resolve(&Default::default()))
-        .map(crate::theme::color32);
+    let (icon, previous, none_label) =
+        if is_fill { (Icon::Fill, app.grid.last_fill.clone(), "No Fill") } else { (Icon::FontColor, app.grid.last_font_color.clone(), "Automatic") };
+    let accent = gridcraft_engine::model::Color::from_hex(&previous).and_then(|color| color.resolve(&Default::default())).map(crate::theme::color32);
     let (clicked, menu) = crate::widgets::split_button(ui, icon, accent, if is_fill { "Fill Color" } else { "Font Color" });
     if clicked {
         app.run_or_alert(id, json!({"color":previous}));
     }
-    let theme_colors = app
-        .session
-        .active()
-        .map(|d| d.wb.theme.colors)
-        .unwrap_or(gridcraft_engine::model::Theme::default().colors);
-    egui::Popup::menu(&menu)
-        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| {
-            if let Some(color) = crate::widgets::color_palette(ui, &theme_colors, app.ui.language.tr(none_label)) {
-                if color != "none" {
-                    if is_fill {
-                        app.grid.last_fill = color.clone();
-                    } else {
-                        app.grid.last_font_color = color.clone();
-                    }
+    let theme_colors = app.session.active().map(|d| d.wb.theme.colors).unwrap_or(gridcraft_engine::model::Theme::default().colors);
+    egui::Popup::menu(&menu).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+        if let Some(color) = crate::widgets::color_palette(ui, &theme_colors, app.ui.language.tr(none_label)) {
+            if color != "none" {
+                if is_fill {
+                    app.grid.last_fill = color.clone();
+                } else {
+                    app.grid.last_font_color = color.clone();
                 }
-                let color = if !is_fill && color == "none" { "auto".to_string() } else { color };
-                app.run_or_alert(id, json!({"color":color}));
-                ui.close();
             }
-        });
+            let color = if !is_fill && color == "none" { "auto".to_string() } else { color };
+            app.run_or_alert(id, json!({"color":color}));
+            ui.close();
+        }
+    });
 }
 
 fn compact_toggle(app: &mut SheetApp, ui: &mut Ui, icon: Icon, label: &str, id: &str, on: bool) {
