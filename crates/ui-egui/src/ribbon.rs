@@ -32,6 +32,7 @@ pub(crate) use controls::{ComboResult, editable_combo};
 use controls::{act, keytip};
 use data::data;
 use formulas::formulas;
+pub(crate) use home::ACCOUNTING_SYMBOLS;
 pub use home::FONTS;
 use home::home;
 use insert::{draw, insert};

@@ -2,6 +2,7 @@
 //! to the same command registry used by the ribbon.
 
 use egui::{Align, Layout, Sense, Ui, vec2};
+use gridcraft_engine::model::{HAlign, Style, VAlign};
 use serde_json::{Value as Json, json};
 
 use crate::{InterfaceMode, SheetApp, icons::Icon, theme::Tokens};
@@ -154,6 +155,13 @@ fn interface_choices(app: &mut SheetApp, ui: &mut Ui) {
 }
 
 fn command_item(app: &mut SheetApp, ui: &mut Ui, label: &str, id: &str, params: &Json) {
+    if let Some(dialog) = id.strip_prefix("dialog:") {
+        if ui.button(app.ui.language.tr(label)).clicked() {
+            app.open_dialog(dialog, params.clone());
+            ui.close();
+        }
+        return;
+    }
     let dialog = match id {
         "home.insertCells" => Some("insertCells"),
         "home.deleteCells" => Some("deleteCells"),
@@ -177,6 +185,13 @@ fn command_item(app: &mut SheetApp, ui: &mut Ui, label: &str, id: &str, params: 
         }
         return;
     }
+    if id == "edit.paste" {
+        if ui.button(app.ui.language.tr(label)).clicked() {
+            app.paste_from_clipboard();
+            ui.close();
+        }
+        return;
+    }
     let Some(spec) = gridcraft_engine::find_command(id) else { return };
     let enabled = (spec.enabled)(&app.session).is_ok();
     let text = app.ui.language.tr(label);
@@ -194,72 +209,114 @@ fn command_item(app: &mut SheetApp, ui: &mut Ui, label: &str, id: &str, params: 
 
 fn standard_toolbar(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
     egui::Panel::top("classic_standard_toolbar")
-        .exact_size(34.0)
+        .exact_size(36.0)
         .frame(egui::Frame::NONE.fill(t.ribbon).inner_margin(egui::Margin::symmetric(8, 3)))
         .show(ui, |ui| {
-            egui::ScrollArea::horizontal().id_salt("classic_toolbar_scroll").show(ui, |ui| {
-                let width = ui.available_width();
-                ui.set_min_width(width);
-                ui.with_layout(Layout::left_to_right(Align::Center).with_main_justify(true), |ui| {
-                    ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing.x = 2.0;
-                        for (label, icon, id, params) in [
-                            ("New Workbook", Icon::NewFile, "file.new", Json::Null),
-                            ("Open", Icon::OpenFolder, "file.open", Json::Null),
-                            ("Save", Icon::Save, "file.save", Json::Null),
-                            ("Print", Icon::Print, "file.print", Json::Null),
-                        ] {
-                            compact_icon_command(app, ui, icon, label, id, &params);
-                        }
-                    });
-                    separator(ui, t);
-                    ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing.x = 2.0;
-                        for (label, icon, id, params) in [
-                            ("Cut", Icon::Cut, "edit.cut", Json::Null),
-                            ("Copy", Icon::Copy, "edit.copy", Json::Null),
-                            ("Paste", Icon::Paste, "edit.paste", Json::Null),
-                            ("Undo", Icon::Undo, "edit.undo", Json::Null),
-                            ("Redo", Icon::Redo, "edit.redo", Json::Null),
-                        ] {
-                            compact_icon_command(app, ui, icon, label, id, &params);
-                        }
-                    });
-                    separator(ui, t);
-                    ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing.x = 2.0;
-                        for (label, icon, id, params) in [
-                            ("Insert Cells", Icon::Insert, "home.insertCells", Json::Null),
-                            ("Insert Rows", Icon::InsertRows, "home.insertRows", Json::Null),
-                            ("Insert Columns", Icon::InsertColumns, "home.insertColumns", Json::Null),
-                            ("Delete Cells", Icon::Delete, "home.deleteCells", Json::Null),
-                            ("Delete Rows", Icon::DeleteRows, "home.deleteRows", Json::Null),
-                            ("Delete Columns", Icon::DeleteColumns, "home.deleteColumns", Json::Null),
-                            ("Insert Sheet", Icon::Sheet, "home.insertSheet", Json::Null),
-                        ] {
-                            compact_icon_command(app, ui, icon, label, id, &params);
-                        }
-                    });
-                    separator(ui, t);
-                    ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing.x = 2.0;
-                        for (label, icon, id, params) in [
-                            ("Sort A to Z", Icon::SortAsc, "data.sortAscending", Json::Null),
-                            ("Filter", Icon::Filter, "data.filter", Json::Null),
-                            ("AutoSum", Icon::Sum, "formulas.autoSum", Json::Null),
-                            ("Find", Icon::Find, "edit.find", json!({"what":""})),
-                            ("AutoFit Column Width", Icon::Format, "home.autofitColumnWidth", Json::Null),
-                            ("AutoFit Row Height", Icon::Format, "home.autofitRowHeight", Json::Null),
-                            ("Hide Rows", Icon::DeleteRows, "home.hideRows", Json::Null),
-                            ("Hide Columns", Icon::DeleteColumns, "home.hideColumns", Json::Null),
-                        ] {
-                            compact_icon_command(app, ui, icon, label, id, &params);
-                        }
-                    });
-                    ui.menu_button(app.ui.language.tr("User Interface"), |ui| interface_choices(app, ui));
-                })
+            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                ui.spacing_mut().item_spacing.x = 1.0;
+                file_toolbar_group(app, ui);
+                separator(ui, t);
+                clipboard_toolbar_group(app, ui, t);
+                separator(ui, t);
+                font_toolbar_group(app, ui);
+                separator(ui, t);
+                editing_toolbar_group(app, ui);
             });
         });
+}
+
+fn file_toolbar_group(app: &mut SheetApp, ui: &mut Ui) {
+    let (open_clicked, open_menu) = crate::widgets::split_button(ui, Icon::OpenFolder, None, "Open");
+    if open_clicked {
+        app.run_or_alert("file.open", json!({}));
+    }
+    egui::Popup::menu(&open_menu).show(|ui| {
+        command_menu(app, ui, &[("New Workbook", "file.new", Json::Null), ("Open…", "file.open", Json::Null)]);
+    });
+    let (save_clicked, save_menu) = crate::widgets::split_button(ui, Icon::Save, None, "Save");
+    if save_clicked {
+        app.run_or_alert("file.save", json!({}));
+    }
+    egui::Popup::menu(&save_menu).show(|ui| {
+        command_menu(app, ui, &[("Save", "file.save", Json::Null), ("Save As…", "file.saveAs", Json::Null)]);
+    });
+}
+
+fn clipboard_toolbar_group(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
+    let cut = crate::widgets::icon_button(ui, Icon::Cut, t.text_dim, "Cut", vec2(26.0, 26.0));
+    if cut.clicked() {
+        app.copy_to_clipboard(ui.ctx(), "edit.cut");
+    }
+    let copy = crate::widgets::icon_button(ui, Icon::Copy, t.text_dim, "Copy", vec2(26.0, 26.0));
+    if copy.clicked() {
+        app.copy_to_clipboard(ui.ctx(), "edit.copy");
+    }
+    let (paste_clicked, paste_menu) = crate::widgets::split_button(ui, Icon::Paste, None, "Paste");
+    if paste_clicked {
+        app.paste_from_clipboard();
+    }
+    egui::Popup::menu(&paste_menu).show(|ui| paste_menu_items(app, ui));
+    compact_icon_command(app, ui, Icon::Undo, "Undo", "edit.undo", &Json::Null);
+    compact_icon_command(app, ui, Icon::Redo, "Redo", "edit.redo", &Json::Null);
+}
+
+fn paste_menu_items(app: &mut SheetApp, ui: &mut Ui) {
+    command_menu(
+        app,
+        ui,
+        &[
+            ("Paste", "edit.paste", json!({})),
+            ("Paste Values", "edit.pasteSpecial", json!({"what":"values"})),
+            ("Paste Formulas", "edit.pasteSpecial", json!({"what":"formulas"})),
+            ("Paste Formatting", "edit.pasteSpecial", json!({"what":"formats"})),
+            ("Transpose", "edit.pasteSpecial", json!({"what":"all","transpose":true})),
+            ("Paste Link", "edit.pasteSpecial", json!({"what":"all","link":true})),
+            ("-", "", Json::Null),
+            ("Paste Special…", "dialog:pasteSpecial", json!({})),
+        ],
+    );
+}
+
+fn font_toolbar_group(app: &mut SheetApp, ui: &mut Ui) {
+    let style = active_style(app);
+    let font_name = app
+        .session
+        .active()
+        .and_then(|d| d.wb.active().map(|s| d.wb.styles.get(s.style_id(d.selection.active)).font.name.clone()))
+        .unwrap_or_else(|| "Calibri".into());
+    ui.menu_button(font_name, |ui| {
+        for name in crate::ribbon::FONTS {
+            if ui.button(*name).clicked() {
+                app.run_or_alert("home.fontName", json!({"name": name}));
+                ui.close();
+            }
+        }
+    });
+    ui.menu_button(format_size(style.font.size), |ui| {
+        for size in [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72] {
+            if ui.button(size.to_string()).clicked() {
+                app.run_or_alert("home.fontSize", json!({"size": size}));
+                ui.close();
+            }
+        }
+    });
+    font_color_control(app, ui);
+    compact_toggle(app, ui, Icon::Bold, "Bold", "home.bold", style.font.bold);
+    compact_toggle(app, ui, Icon::Italic, "Italic", "home.italic", style.font.italic);
+    underline_control(app, ui);
+    compact_toggle(app, ui, Icon::Strike, "Strikethrough", "home.strikethrough", style.font.strike);
+}
+
+fn editing_toolbar_group(app: &mut SheetApp, ui: &mut Ui) {
+    let sort_filter = crate::widgets::small_button(ui, Icon::SortFilter, "", "Sort & Filter", true);
+    egui::Popup::menu(&sort_filter).show(|ui| sort_filter_menu(app, ui));
+    let orientation = crate::widgets::small_button(ui, Icon::Orientation, "", "Orientation", true);
+    egui::Popup::menu(&orientation).show(|ui| orientation_menu(app, ui));
+    let style = active_style(app);
+    let wrap = crate::widgets::small_toggle_button(ui, Icon::Wrap, "Wrap Text", "Wrap Text", style.align.wrap);
+    if wrap.clicked() {
+        app.run_or_alert("home.wrapText", json!({}));
+    }
 }
 
 fn formatting_toolbar(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
@@ -267,84 +324,247 @@ fn formatting_toolbar(app: &mut SheetApp, ui: &mut Ui, t: &Tokens) {
         .exact_size(36.0)
         .frame(egui::Frame::NONE.fill(t.ribbon).inner_margin(egui::Margin::symmetric(8, 3)))
         .show(ui, |ui| {
-            egui::ScrollArea::horizontal().id_salt("classic_format_scroll").show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 2.0;
-                    ui.menu_button(
-                        app.session
-                            .active()
-                            .and_then(|d| d.wb.active().map(|s| d.wb.styles.get(s.style_id(d.selection.active)).font.name.clone()))
-                            .unwrap_or_else(|| "Calibri".into()),
-                        |ui| {
-                            for name in ["Arial", "Calibri", "Cambria", "Courier New", "Georgia", "Times New Roman", "Verdana"] {
-                                if ui.button(name).clicked() {
-                                    app.run_or_alert("home.fontName", json!({"name": name}));
-                                    ui.close();
-                                }
-                            }
-                        },
-                    );
-                    let size = app
-                        .session
-                        .active()
-                        .and_then(|d| d.wb.active().map(|s| d.wb.styles.get(s.style_id(d.selection.active)).font.size))
-                        .unwrap_or(11.0);
-                    ui.menu_button(format_size(size), |ui| {
-                        for size in [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72] {
-                            if ui.button(size.to_string()).clicked() {
-                                app.run_or_alert("home.fontSize", json!({"size": size}));
-                                ui.close();
-                            }
-                        }
-                    });
-                    separator(ui, t);
-                    for (label, icon, id, params) in [
-                        ("Bold", Icon::Bold, "home.bold", json!({})),
-                        ("Italic", Icon::Italic, "home.italic", json!({})),
-                        ("Underline", Icon::Underline, "home.underline", json!({})),
-                        ("Strikethrough", Icon::Strike, "home.strikethrough", json!({})),
-                        ("Borders", Icon::BorderAll, "home.borders", json!({"preset":"all"})),
-                    ] {
-                        compact_icon_command(app, ui, icon, label, id, &params);
-                    }
-                    separator(ui, t);
-                    for (label, icon, id, params) in [
-                        ("Align Left", Icon::AlignLeft, "home.alignLeft", json!({})),
-                        ("Center", Icon::AlignCenter, "home.alignCenter", json!({})),
-                        ("Align Right", Icon::AlignRight, "home.alignRight", json!({})),
-                        ("Top Align", Icon::AlignTop, "home.alignTop", json!({})),
-                        ("Middle Align", Icon::AlignMiddle, "home.alignMiddle", json!({})),
-                        ("Bottom Align", Icon::AlignBottom, "home.alignBottom", json!({})),
-                        ("Decrease Indent", Icon::IndentDec, "home.decreaseIndent", json!({})),
-                        ("Increase Indent", Icon::IndentInc, "home.increaseIndent", json!({})),
-                        ("Wrap Text", Icon::Wrap, "home.wrapText", json!({})),
-                        ("Merge & Center", Icon::Merge, "home.mergeCenter", json!({})),
-                        ("Currency", Icon::Currency, "home.accounting", json!({})),
-                        ("Percent", Icon::Percent, "home.percent", json!({})),
-                        ("Comma Style", Icon::Comma, "home.comma", json!({})),
-                        ("Increase Decimal", Icon::DecInc, "home.increaseDecimal", json!({})),
-                        ("Decrease Decimal", Icon::DecDec, "home.decreaseDecimal", json!({})),
-                    ] {
-                        compact_icon_command(app, ui, icon, label, id, &params);
-                    }
-                    for (label, id) in [("Font Color", "home.fontColor"), ("Cell Background", "home.fillColor")] {
-                        ui.menu_button(label, |ui| {
-                            let choices: &[(&str, &str)] = if id == "home.fontColor" {
-                                &[("Automatic", "auto"), ("Red", "#C00000"), ("Blue", "#0070C0"), ("Green", "#70AD47"), ("Yellow", "#FFFF00")]
-                            } else {
-                                &[("Red", "#C00000"), ("Blue", "#0070C0"), ("Green", "#70AD47"), ("Yellow", "#FFFF00"), ("No Fill", "none")]
-                            };
-                            for (name, value) in choices {
-                                if ui.button(*name).clicked() {
-                                    app.run_or_alert(id, json!({"color": *value}));
-                                    ui.close();
-                                }
-                            }
-                        });
-                    }
-                })
+            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                ui.spacing_mut().item_spacing.x = 1.0;
+                currency_control(app, ui);
+                compact_icon_command(app, ui, Icon::Percent, "Percent", "home.percent", &Json::Null);
+                compact_icon_command(app, ui, Icon::Comma, "Comma Style", "home.comma", &Json::Null);
+                compact_icon_command(app, ui, Icon::DecInc, "Increase Decimal", "home.increaseDecimal", &Json::Null);
+                compact_icon_command(app, ui, Icon::DecDec, "Decrease Decimal", "home.decreaseDecimal", &Json::Null);
+                separator(ui, t);
+                borders_control(app, ui);
+                separator(ui, t);
+
+                let style = active_style(app);
+                compact_toggle(app, ui, Icon::AlignLeft, "Align Left", "home.alignLeft", style.align.h == HAlign::Left);
+                compact_toggle(app, ui, Icon::AlignCenter, "Center", "home.alignCenter", style.align.h == HAlign::Center);
+                compact_toggle(app, ui, Icon::AlignRight, "Align Right", "home.alignRight", style.align.h == HAlign::Right);
+                compact_icon_command(app, ui, Icon::IndentDec, "Decrease Indent", "home.decreaseIndent", &Json::Null);
+                compact_icon_command(app, ui, Icon::IndentInc, "Increase Indent", "home.increaseIndent", &Json::Null);
+                compact_toggle(app, ui, Icon::AlignTop, "Top Align", "home.alignTop", style.align.v == VAlign::Top);
+                compact_toggle(app, ui, Icon::AlignMiddle, "Middle Align", "home.alignMiddle", style.align.v == VAlign::Center);
+                compact_toggle(app, ui, Icon::AlignBottom, "Bottom Align", "home.alignBottom", style.align.v == VAlign::Bottom);
+                separator(ui, t);
+                fill_color_control(app, ui);
+                format_painter_control(app, ui);
+                separator(ui, t);
+                compact_icon_command(app, ui, Icon::InsertRows, "Insert Rows", "home.insertRows", &Json::Null);
+                compact_icon_command(app, ui, Icon::InsertColumns, "Insert Columns", "home.insertColumns", &Json::Null);
+                compact_icon_command(app, ui, Icon::DeleteRows, "Delete Rows", "home.deleteRows", &Json::Null);
+                compact_icon_command(app, ui, Icon::DeleteColumns, "Delete Columns", "home.deleteColumns", &Json::Null);
+                separator(ui, t);
+                merge_control(app, ui);
             });
         });
+}
+
+fn command_menu(app: &mut SheetApp, ui: &mut Ui, items: &[(&str, &str, Json)]) {
+    for (label, id, params) in items {
+        if *label == "-" {
+            ui.separator();
+        } else {
+            command_item(app, ui, label, id, params);
+        }
+    }
+}
+
+fn sort_filter_menu(app: &mut SheetApp, ui: &mut Ui) {
+    command_menu(
+        app,
+        ui,
+        &[
+            ("Sort A to Z", "data.sortAscending", json!({})),
+            ("Sort Z to A", "data.sortDescending", json!({})),
+            ("Custom Sort…", "dialog:sort", json!({})),
+            ("-", "", Json::Null),
+            ("Filter", "data.filter", json!({})),
+            ("Clear", "data.clearFilter", json!({})),
+            ("Reapply", "data.reapply", json!({})),
+        ],
+    );
+}
+
+fn orientation_menu(app: &mut SheetApp, ui: &mut Ui) {
+    command_menu(
+        app,
+        ui,
+        &[
+            ("Angle Counterclockwise", "home.orientation", json!({"angle":"counterclockwise"})),
+            ("Angle Clockwise", "home.orientation", json!({"angle":"clockwise"})),
+            ("Vertical Text", "home.orientation", json!({"angle":"vertical"})),
+            ("Rotate Text Up", "home.orientation", json!({"angle":"up"})),
+            ("Rotate Text Down", "home.orientation", json!({"angle":"down"})),
+            ("Horizontal", "home.orientation", json!({"angle":0})),
+            ("-", "", Json::Null),
+            ("Format Cell Alignment…", "dialog:formatCells", json!({"tab":"Alignment"})),
+        ],
+    );
+}
+
+fn underline_control(app: &mut SheetApp, ui: &mut Ui) {
+    let (clicked, menu) = crate::widgets::split_button(ui, Icon::Underline, None, "Underline");
+    if clicked {
+        app.run_or_alert("home.underline", json!({}));
+    }
+    egui::Popup::menu(&menu).show(|ui| {
+        command_menu(
+            app,
+            ui,
+            &[
+                ("Underline", "home.underline", json!({"style":"single"})),
+                ("Double Underline", "home.underline", json!({"style":"double"})),
+            ],
+        );
+    });
+}
+
+fn currency_control(app: &mut SheetApp, ui: &mut Ui) {
+    let (clicked, menu) = crate::widgets::split_button(ui, Icon::Currency, None, "Accounting Number Format");
+    if clicked {
+        app.run_or_alert("home.accounting", json!({}));
+    }
+    egui::Popup::menu(&menu).show(|ui| {
+        let mut items: Vec<_> = crate::ribbon::ACCOUNTING_SYMBOLS
+            .iter()
+            .map(|(label, code)| (*label, "home.numberFormat", json!({"code":code})))
+            .collect();
+        items.push(("-", "", Json::Null));
+        items.push(("More Accounting Formats…", "dialog:formatCells", json!({"tab":"Number"})));
+        command_menu(app, ui, &items);
+    });
+}
+
+fn borders_control(app: &mut SheetApp, ui: &mut Ui) {
+    let (clicked, menu) = crate::widgets::split_button(ui, Icon::Borders, None, "Borders");
+    if clicked {
+        let preset = app.grid.last_border.clone();
+        app.run_or_alert("home.borders", json!({"preset":preset}));
+    }
+    egui::Popup::menu(&menu).show(|ui| {
+        for (label, preset) in [
+            ("Bottom Border", "bottom"),
+            ("Top Border", "top"),
+            ("Left Border", "left"),
+            ("Right Border", "right"),
+            ("No Border", "none"),
+            ("All Borders", "all"),
+            ("Outside Borders", "outside"),
+            ("Thick Outside Borders", "thickOutside"),
+            ("Bottom Double Border", "doubleBottom"),
+            ("Thick Bottom Border", "thickBottom"),
+            ("Top and Bottom Border", "topBottom"),
+            ("Top and Thick Bottom Border", "topThickBottom"),
+            ("Top and Double Bottom Border", "topDoubleBottom"),
+            ("Inside Borders", "inside"),
+        ] {
+            let response = crate::border_preview::preset_button(ui, app.ui.language.tr(label), preset);
+            if response.clicked() {
+                app.grid.last_border = preset.to_string();
+                app.run_or_alert("home.borders", json!({"preset":preset}));
+                ui.close();
+            }
+        }
+        ui.separator();
+        if ui.button(app.ui.language.tr("More Borders…")).clicked() {
+            app.open_dialog("formatCells", json!({"tab":"Border"}));
+            ui.close();
+        }
+    });
+}
+
+fn font_color_control(app: &mut SheetApp, ui: &mut Ui) {
+    color_control(app, ui, "home.fontColor");
+}
+
+fn fill_color_control(app: &mut SheetApp, ui: &mut Ui) {
+    color_control(app, ui, "home.fillColor");
+}
+
+fn color_control(app: &mut SheetApp, ui: &mut Ui, id: &str) {
+    let is_fill = id == "home.fillColor";
+    let (icon, previous, none_label) = if is_fill {
+        (Icon::Fill, app.grid.last_fill.clone(), "No Fill")
+    } else {
+        (Icon::FontColor, app.grid.last_font_color.clone(), "Automatic")
+    };
+    let accent = gridcraft_engine::model::Color::from_hex(&previous)
+        .and_then(|color| color.resolve(&Default::default()))
+        .map(crate::theme::color32);
+    let (clicked, menu) = crate::widgets::split_button(ui, icon, accent, if is_fill { "Fill Color" } else { "Font Color" });
+    if clicked {
+        app.run_or_alert(id, json!({"color":previous}));
+    }
+    let theme_colors = app
+        .session
+        .active()
+        .map(|d| d.wb.theme.colors)
+        .unwrap_or(gridcraft_engine::model::Theme::default().colors);
+    egui::Popup::menu(&menu)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .show(|ui| {
+            if let Some(color) = crate::widgets::color_palette(ui, &theme_colors, app.ui.language.tr(none_label)) {
+                if color != "none" {
+                    if is_fill {
+                        app.grid.last_fill = color.clone();
+                    } else {
+                        app.grid.last_font_color = color.clone();
+                    }
+                }
+                let color = if !is_fill && color == "none" { "auto".to_string() } else { color };
+                app.run_or_alert(id, json!({"color":color}));
+                ui.close();
+            }
+        });
+}
+
+fn compact_toggle(app: &mut SheetApp, ui: &mut Ui, icon: Icon, label: &str, id: &str, on: bool) {
+    let response = crate::widgets::toggle_button(ui, icon, on, app.ui.language.tr(label));
+    if response.clicked() {
+        app.run_or_alert(id, json!({}));
+    }
+}
+
+fn format_painter_control(app: &mut SheetApp, ui: &mut Ui) {
+    let on = app.session.format_painter.is_some();
+    let response = crate::widgets::toggle_button(ui, Icon::Brush, on, app.ui.language.tr("Format Painter"));
+    if response.double_clicked() {
+        app.run_or_alert("edit.formatPainter", json!({"sticky":true}));
+    } else if response.clicked() {
+        if on {
+            app.session.format_painter = None;
+        } else {
+            app.run_or_alert("edit.formatPainter", json!({}));
+        }
+    }
+}
+
+fn merge_control(app: &mut SheetApp, ui: &mut Ui) {
+    let (main, menu) = crate::widgets::small_split_button(ui, Icon::Merge, "Merge & Center", "Merge & Center");
+    if main.clicked() {
+        app.run_or_alert("home.mergeCenter", json!({}));
+    }
+    egui::Popup::menu(&menu).show(|ui| {
+        command_menu(
+            app,
+            ui,
+            &[
+                ("Merge & Center", "home.mergeCenter", json!({})),
+                ("Merge Across", "home.mergeAcross", json!({})),
+                ("Merge Cells", "home.mergeCells", json!({})),
+                ("Unmerge Cells", "home.unmergeCells", json!({})),
+            ],
+        );
+    });
+}
+
+fn active_style(app: &SheetApp) -> Style {
+    app.session
+        .active()
+        .and_then(|d| {
+            let sheet = d.wb.active()?;
+            Some(d.wb.styles.get(sheet.style_id(d.selection.active)).clone())
+        })
+        .unwrap_or_default()
 }
 
 fn compact_icon_command(app: &mut SheetApp, ui: &mut Ui, icon: Icon, label: &str, id: &str, params: &Json) {
