@@ -71,6 +71,7 @@ use serde_json::{Value as Json, json};
 pub use control::{ControlRequest, ControlResponse};
 
 mod app;
+mod classic;
 mod clock;
 mod services;
 mod state;
@@ -89,6 +90,11 @@ pub struct UiState {
     pub system_theme: bool,
     pub ribbon_tab: String,
     pub ribbon_collapsed: bool,
+    /// Show the app's title toolbar with AutoSave, window controls and workbook title.
+    pub show_title_bar: bool,
+    /// The top chrome layout. Existing preference files default to the original ribbon.
+    #[serde(deserialize_with = "lenient_interface_mode")]
+    pub interface: InterfaceMode,
     pub formula_bar_expanded: bool,
     /// Lines the expanded formula bar shows: the height its bottom edge was last dragged to.
     /// Expanding it again (the chevron, Ctrl+Shift+U) returns to that height.
@@ -127,6 +133,23 @@ pub struct UiState {
     pub interface_scale: u16,
 }
 
+/// Switchable top-of-window layout; workbook content and commands are shared.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum InterfaceMode {
+    #[default]
+    GridCraftStandard,
+    LibreOfficeClassic,
+}
+
+fn lenient_interface_mode<'de, D: serde::Deserializer<'de>>(d: D) -> Result<InterfaceMode, D::Error> {
+    let value = Json::deserialize(d)?;
+    Ok(match value.as_str() {
+        Some("libreOfficeClassic") => InterfaceMode::LibreOfficeClassic,
+        _ => InterfaceMode::GridCraftStandard,
+    })
+}
+
 pub const INTERFACE_SCALE_MIN: u16 = 75;
 pub const INTERFACE_SCALE_MAX: u16 = 200;
 
@@ -148,6 +171,8 @@ impl Default for UiState {
             system_theme: false,
             ribbon_tab: "Home".into(),
             ribbon_collapsed: false,
+            show_title_bar: true,
+            interface: InterfaceMode::GridCraftStandard,
             formula_bar_expanded: false,
             formula_bar_lines: formula_bar::MAX_LINES,
             status_bar: true,

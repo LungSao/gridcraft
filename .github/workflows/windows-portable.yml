@@ -1,0 +1,67 @@
+name: Windows x64 portable build
+
+# A focused build for reviewing or testing an unreleased fork branch. The full release workflow
+# intentionally withholds Windows packages from non-release branches.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/windows-portable.yml
+      - Cargo.toml
+      - Cargo.lock
+      - apps/**
+      - crates/**
+      - packaging/windows/**
+      - build.rs
+      - rust-toolchain.toml
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64-portable:
+    name: Build and package GridCraft for Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: windows-portable-x64
+
+      - name: Install the pinned WiX toolchain
+        shell: pwsh
+        run: |
+          $tools = Join-Path $env:RUNNER_TEMP 'gridcraft-wix'
+          dotnet tool install --tool-path $tools wix --version 5.0.2
+          if ($LASTEXITCODE -ne 0) { throw 'WiX installation failed.' }
+          $tools >> $env:GITHUB_PATH
+          $policy = Get-Content -Raw -LiteralPath packaging/windows/install-policy.json | ConvertFrom-Json
+          foreach ($extension in @($policy.extensions)) {
+            & (Join-Path $tools 'wix.exe') extension add -g "WixToolset.$extension.wixext/5.0.2"
+            if ($LASTEXITCODE -ne 0) { throw "WiX extension $extension installation failed." }
+          }
+
+      - name: Build and package portable x64 binaries
+        shell: pwsh
+        run: ./packaging/windows/package.ps1 -Arch x64
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gridcraft-windows-x64-portable
+          path: dist/release/gridcraft-*-windows-x64-portable.zip
+          if-no-files-found: error
+          retention-days: 14

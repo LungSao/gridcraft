@@ -6,9 +6,9 @@ use super::state::{NoticeKind, OpenWindow, SaveAnswer, SheetView};
 #[cfg(not(target_arch = "wasm32"))]
 use super::updates_ui;
 use super::{
-    CellRef, HashMap, INTERFACE_SCALE_MAX, INTERFACE_SCALE_MIN, Json, Notice, Perf, RangeRef, Session, SheetApp, UiRequest, UiState, backstage,
-    clamp_interface_scale, clean_error, control, desktop_theme, dialogs, editor, floating_pictures, formula_bar, formula_locale, grid, i18n, json,
-    keytips, macro_ui, panes, pivot_pane, printing, ribbon, tabs, text_box, theme, widgets,
+    CellRef, HashMap, INTERFACE_SCALE_MAX, INTERFACE_SCALE_MIN, InterfaceMode, Json, Notice, Perf, RangeRef, Session, SheetApp, UiRequest, UiState,
+    backstage, clamp_interface_scale, clean_error, control, desktop_theme, dialogs, editor, floating_pictures, formula_bar, formula_locale, grid,
+    i18n, json, keytips, macro_ui, panes, pivot_pane, printing, ribbon, tabs, text_box, theme, widgets,
 };
 
 mod clipboard;
@@ -219,14 +219,17 @@ impl SheetApp {
         if self.backstage.is_none() || self.keytips.prefix().is_some() {
             self.ribbon_keys(&ctx);
         }
-        if self.chrome.title_bar {
+        if self.chrome.title_bar && self.ui.show_title_bar {
             ribbon::title_bar(self, ui);
         }
         if self.backstage.is_some() {
             // File tab: the Backstage view replaces everything below the title bar.
             backstage::show(self, ui);
         } else {
-            ribbon::show(self, ui);
+            match self.ui.interface {
+                InterfaceMode::GridCraftStandard => ribbon::show(self, ui),
+                InterfaceMode::LibreOfficeClassic => crate::classic::show(self, ui),
+            }
             widgets::notice_bar(self, ui);
             // Python mode edits only in the formula bar: it shows while a Python edit is open,
             // also when the preference hides it.

@@ -9,7 +9,7 @@ use super::{
 };
 
 /// The Accounting Number Format dropdown: label and the code Excel applies for that symbol.
-const ACCOUNTING_SYMBOLS: &[(&str, &str)] = &[
+pub(crate) const ACCOUNTING_SYMBOLS: &[(&str, &str)] = &[
     ("$ English (United States)", "_(\"$\"* #,##0.00_);_(\"$\"* \\(#,##0.00\\);_(\"$\"* \"-\"??_);_(@_)"),
     ("£ English (United Kingdom)", "_-[$£-809]* #,##0.00_-;-[$£-809]* #,##0.00_-;_-[$£-809]* \"-\"??_-;_-@_-"),
     ("€ Euro", "_-[$€-x-euro2] * #,##0.00_-;-[$€-x-euro2] * #,##0.00_-;_-[$€-x-euro2] * \"-\"??_-;_-@_-"),
