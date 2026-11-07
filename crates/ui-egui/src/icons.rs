@@ -307,16 +307,11 @@ pub fn paint_on_sheet(p: &Painter, rect: Rect, icon: Icon, c: Color32) {
     paint_with(p, rect, icon, c, &Palette::of(&Tokens::light()));
 }
 
-fn paint_row_column_action(
-    g: &G,
-    icon: Icon,
-    pal: &Palette,
-    paper: Color32,
-    light: Color32,
-    blue: Color32,
-    green: Color32,
-    red: Color32,
-) {
+fn paint_row_column_action(g: &G, icon: Icon, pal: &Palette, light: Color32) {
+    let paper = pal.paper;
+    let blue = pal.cat(Cat::Blue);
+    let green = pal.cat(Cat::Green);
+    let red = pal.cat(Cat::Red);
     g.rect(2.0, 2.0, 12.0, 12.0, Some(paper), Some(light));
     g.stroke(&[(2.0, 6.0), (14.0, 6.0)], light);
     g.stroke(&[(2.0, 10.0), (14.0, 10.0)], light);
@@ -495,7 +490,7 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
         | Icon::InsertColumns
         | Icon::DeleteRows
         | Icon::DeleteColumns => {
-            paint_row_column_action(&g, icon, pal, paper, light, blue, green, red);
+            paint_row_column_action(&g, icon, pal, light);
         }
         Icon::Insert | Icon::Delete | Icon::Format => {
             g.rect(2.0, 3.0, 12.0, 10.0, Some(paper), Some(light));
