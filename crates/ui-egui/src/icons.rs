@@ -486,10 +486,7 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
             g.stroke(&[(4.0, 5.2), (9.0, 5.2)], green);
             g.stroke(&[(4.0, 10.7), (9.0, 10.7)], red);
         }
-        Icon::InsertRows
-        | Icon::InsertColumns
-        | Icon::DeleteRows
-        | Icon::DeleteColumns => {
+        Icon::InsertRows | Icon::InsertColumns | Icon::DeleteRows | Icon::DeleteColumns => {
             paint_row_column_action(&g, icon, pal, light);
         }
         Icon::Insert | Icon::Delete | Icon::Format => {
